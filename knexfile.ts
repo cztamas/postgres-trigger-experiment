@@ -1,9 +1,9 @@
 'use strict';
 
-require('./env/load-env');
-const path = require('path');
+import './env/load-env';
+import path from 'path';
 
-module.exports = {
+export default {
   client: 'pg',
   connection: process.env.DATABASE_URL,
   migrations: {
