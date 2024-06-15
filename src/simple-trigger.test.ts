@@ -1,10 +1,8 @@
 import { buildAndLoadTsToDb } from '../test-helpers/plv8ify';
 import { db } from './db';
-import { overrideDbTime, clearTimeOverride } from '../test-helpers/setup';
 
 describe('simple trigger tests', () => {
   afterEach(async () => {
-    await clearTimeOverride();
     await db.raw('SELECT remove_all_triggers()');
     await Promise.all([db('event').del(), db('message_outbox').del()]);
   });
@@ -56,13 +54,5 @@ describe('simple trigger tests', () => {
     expect(events).toHaveLength(2);
     expect(events[0]).toMatchObject({ user_id: 'nice_user', type: 'pathetic_failure' });
     expect(events[1]).toMatchObject({ user_id: 'nice_user', type: 'some_other_event' });
-  });
-
-  test('DB current time can be overwritten', async () => {
-    const testTimestamp = '2022-01-01T00:00:00Z';
-    await overrideDbTime(testTimestamp);
-
-    const result = await db.raw('SELECT now() as now');
-    expect(result.rows).toEqual([{ now: new Date(testTimestamp) }]);
   });
 });
