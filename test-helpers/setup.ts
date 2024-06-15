@@ -7,6 +7,22 @@ afterAll(async () => {
 
 beforeAll(async () => {
   await db.raw(`
+    CREATE SCHEMA IF NOT EXISTS test_overrides;
+
+    CREATE OR REPLACE FUNCTION test_overrides.now()
+      RETURNS timestamptz IMMUTABLE PARALLEL SAFE AS
+    $$
+    BEGIN
+        if current_setting('test_overrides.time_override', true) is null or current_setting('test_overrides.time_override') = '' then
+            return pg_catalog.now();
+        else
+            return current_setting('test_overrides.time_override')::timestamptz;
+        end if;
+    END
+    $$ language plpgsql;
+  `);
+
+  await db.raw(`
     CREATE OR REPLACE FUNCTION remove_all_triggers() RETURNS text AS $$ DECLARE
       triggNameRecord RECORD;
       triggTableRecord RECORD;
@@ -22,3 +38,14 @@ beforeAll(async () => {
     END;
     $$ LANGUAGE plpgsql SECURITY DEFINER;`);
 });
+
+export const overrideDbTime = async (timestamp: string) => {
+  await db.raw(`
+    set search_path = test_overrides,pg_temp,"$user",public,pg_catalog;
+    set test_overrides.time_override = '${timestamp}';
+`);
+};
+
+export const clearTimeOverride = async () => {
+  await db.raw(`set test_overrides.time_override = ''`);
+};

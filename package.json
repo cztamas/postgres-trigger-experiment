@@ -8,8 +8,8 @@
     "lint": "eslint .",
     "migrate-dev": "NODE_ENV=dev knex migrate:latest",
     "migrate-test": "NODE_ENV=test knex migrate:latest",
-    "test": "jest --config test-helpers/jest.config.ts",
-    "test-watch": "jest --watch --config test-helpers/jest.config.ts"
+    "test": "jest --runInBand --config test-helpers/jest.config.ts",
+    "test-watch": "jest --watch --runInBand --config test-helpers/jest.config.ts"
   },
   "author": "cztamas",
   "license": "ISC",

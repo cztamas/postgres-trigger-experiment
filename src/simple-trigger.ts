@@ -6,7 +6,7 @@ type Event = {
 };
 
 //@plv8ify-trigger
-export function simpleTrigger(NEW: Event, OLD: Event): Event {
+export function simpleTrigger(NEW: Event): Event {
   if (TG_OP === 'INSERT' && NEW.type === 'pathetic_failure') {
     plv8.execute(
       'INSERT INTO message_outbox (user_id, content, created_at) VALUES ($1, $2, NOW())',
