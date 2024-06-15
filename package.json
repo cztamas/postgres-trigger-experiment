@@ -14,7 +14,7 @@
   "author": "cztamas",
   "license": "ISC",
   "dependencies": {
-    "cztamas-plv8ify-experiment": "^0.0.2",
+    "cztamas-plv8ify-experiment": "^0.0.3",
     "knex": "^3.1.0",
     "pg": "^8.12.0"
   },

@@ -1,7 +1,7 @@
 import { addDays } from 'date-fns';
-import { buildAndLoadTsToDb } from '../test-helpers/plv8ify';
-import { overrideDbTime, clearTimeOverride } from '../test-helpers/db';
-import { db } from './db';
+import { buildAndLoadTsToDb } from '../../test-helpers/plv8ify';
+import { overrideDbTime, clearTimeOverride } from '../../test-helpers/db';
+import { db } from '../db';
 
 const range = (length: number) => Array.from({ length }, (_, i) => i);
 const someSunday = new Date('2024-06-02T12:00:00Z');

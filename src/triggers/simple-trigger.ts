@@ -1,6 +1,5 @@
-import { Event } from './types';
+import { Event } from '../types';
 
-//@plv8ify-trigger
 export function simpleTrigger(NEW: Event): Event {
   if (TG_OP !== 'INSERT' || !['failure', 'success'].includes(NEW.type)) return NEW;
 

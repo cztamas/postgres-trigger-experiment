@@ -1,10 +1,10 @@
-import { Event } from './types';
+import { Event } from '../types';
 
-//@plv8ify-trigger
 export function streakTrigger(NEW: Event): Event {
   if (TG_OP !== 'INSERT' || NEW.type !== 'success') return NEW;
 
-  // I could not mock the date inside the v8 engine... :(
+  // We wouldn't want to do this for real, we would simply use new Date(), it's kind of an illustration here
+  // The NOW() function is mocked correctly, but I didn't find any way to mock the date inside the plv8 v8 engine
   const { now } = plv8.execute<{ now: Date }>('SELECT NOW()::date as now')[0];
   if (now.getDay() !== 0) return NEW;
 

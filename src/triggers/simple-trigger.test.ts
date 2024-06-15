@@ -1,5 +1,5 @@
-import { buildAndLoadTsToDb } from '../test-helpers/plv8ify';
-import { db } from './db';
+import { buildAndLoadTsToDb } from '../../test-helpers/plv8ify';
+import { db } from '../db';
 
 describe('simple trigger tests', () => {
   afterEach(async () => {
