@@ -1,9 +1,4 @@
-type Event = {
-  id: string;
-  type: string;
-  user_id: string;
-  timestamp: Date;
-};
+import { Event } from './types';
 
 //@plv8ify-trigger
 export function simpleTrigger(NEW: Event): Event {

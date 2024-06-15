@@ -3,7 +3,9 @@ import { db } from '../src/db';
 
 export const pgClient = new Client({ connectionString: process.env.DATABASE_URL });
 
-export const overrideDbTime = async (timestamp: string) => {
+export const overrideDbTime = async (date: string | Date) => {
+  const timestamp = typeof date === 'string' ? date : date.toISOString();
+
   await db.raw(`
     set search_path = test_overrides,pg_temp,"$user",public,pg_catalog;
     set test_overrides.time_override = '${timestamp}';
