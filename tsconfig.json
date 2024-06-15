@@ -1,6 +1,11 @@
 {
   "compilerOptions": {
     "types": ["jest", "node"],
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      "plv8ify": ["node_modules/plv8ify/src"],
+      "plv8ify/*": ["node_modules/plv8ify/src/*"]
+    }
   }
 }
