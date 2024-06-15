@@ -1,11 +1,13 @@
 import '../env/load-env';
 import { db } from '../src/db';
+import { pgClient } from './db';
 
 afterAll(async () => {
-  await db.destroy();
+  await Promise.all([db.destroy(), pgClient.end()]);
 });
 
 beforeAll(async () => {
+  await pgClient.connect();
   await db.raw(`
     CREATE SCHEMA IF NOT EXISTS test_overrides;
 

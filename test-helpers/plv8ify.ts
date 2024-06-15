@@ -1,6 +1,6 @@
 import path from 'path';
 import { PLV8ify } from 'cztamas-plv8ify-experiment';
-import { db } from '../src/db';
+import { pgClient } from './db';
 
 export const buildAndLoadTsToDb = async (dirName: string, relativePath: string) => {
   const codeFilePath = path.join(dirName, relativePath);
@@ -24,5 +24,5 @@ export const buildAndLoadTsToDb = async (dirName: string, relativePath: string) 
     outputFolder: 'does-not-matter'
   });
 
-  await Promise.all(sqlFiles.map(({ sql }) => db.raw(sql)));
+  await Promise.all(sqlFiles.map(({ sql }) => pgClient.query(sql)));
 };

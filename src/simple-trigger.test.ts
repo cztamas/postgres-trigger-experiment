@@ -9,24 +9,35 @@ describe('simple trigger tests', () => {
     await Promise.all([db('event').del(), db('message_outbox').del()]);
   });
 
-  test('should insert a row to messages table if a failure event is inserted', async () => {
+  const loadTrigger = async () => {
     await buildAndLoadTsToDb(__dirname, './simple-trigger.ts');
     await db.raw(
       'CREATE TRIGGER testTrigger BEFORE INSERT ON event FOR EACH ROW EXECUTE PROCEDURE simpleTrigger();'
     );
+  };
 
-    await db('event').insert({ user_id: 'nice_user', type: 'pathetic_failure' });
+  test('should insert a row to messages table if a failure event is inserted', async () => {
+    await loadTrigger();
+
+    await db('event').insert({ user_id: 'nice_user', type: 'failure' });
 
     const messages = await db('message_outbox').select('*');
     expect(messages).toHaveLength(1);
     expect(messages[0]).toMatchObject({ user_id: 'nice_user', content: "Don't give up!" });
   });
 
+  test('should insert a row to messages table if a success event is inserted', async () => {
+    await loadTrigger();
+
+    await db('event').insert({ user_id: 'nice_user', type: 'success' });
+
+    const messages = await db('message_outbox').select('*');
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).toMatchObject({ user_id: 'nice_user', content: 'Congratulations!' });
+  });
+
   test('should not insert messages for other event types', async () => {
-    await buildAndLoadTsToDb(__dirname, './simple-trigger.ts');
-    await db.raw(
-      'CREATE TRIGGER testTrigger BEFORE INSERT ON event FOR EACH ROW EXECUTE PROCEDURE simpleTrigger();'
-    );
+    await loadTrigger();
 
     await db('event').insert({ user_id: 'nice_user', type: 'some_other_event' });
 
@@ -35,10 +46,7 @@ describe('simple trigger tests', () => {
   });
 
   test('should insert the events without modification', async () => {
-    await buildAndLoadTsToDb(__dirname, './simple-trigger.ts');
-    await db.raw(
-      'CREATE TRIGGER testTrigger BEFORE INSERT ON event FOR EACH ROW EXECUTE PROCEDURE simpleTrigger();'
-    );
+    await loadTrigger();
 
     await db('event').insert({ user_id: 'nice_user', type: 'pathetic_failure' });
     await db('event').insert({ user_id: 'nice_user', type: 'some_other_event' });
