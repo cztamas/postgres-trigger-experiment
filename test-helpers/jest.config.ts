@@ -6,7 +6,5 @@ export default {
   moduleFileExtensions: ['ts', 'js', 'json'],
   clearMocks: true,
   resetMocks: true,
-  moduleNameMapper: {
-    '^plv8ify$': '<rootDir>/node_modules/plv8ify/src'
-  }
+  transformIgnorePatterns: ['<rootDir>/node_modules/(?!cztamas-plv8ify-experiment/.*)']
 };

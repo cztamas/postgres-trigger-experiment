@@ -1,11 +1,11 @@
 import path from 'path';
-import { PLV8ifyCLI } from 'plv8ify';
+import { PLV8ify } from 'cztamas-plv8ify-experiment';
 import { db } from '../src/db';
 
 export const buildAndLoadTsToDb = async (dirName: string, relativePath: string) => {
   const codeFilePath = path.join(dirName, relativePath);
 
-  const plv8ify = new PLV8ifyCLI('esbuild');
+  const plv8ify = new PLV8ify('esbuild');
   plv8ify.init(codeFilePath, 'types.ts');
 
   const bundledJs = await plv8ify.build({

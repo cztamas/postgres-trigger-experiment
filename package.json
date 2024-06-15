@@ -14,9 +14,9 @@
   "author": "cztamas",
   "license": "ISC",
   "dependencies": {
+    "cztamas-plv8ify-experiment": "^0.0.2",
     "knex": "^3.1.0",
-    "pg": "^8.12.0",
-    "plv8ify": "^0.0.57"
+    "pg": "^8.12.0"
   },
   "devDependencies": {
     "@babel/core": "^7.24.7",
