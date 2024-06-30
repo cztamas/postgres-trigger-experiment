@@ -1,7 +1,6 @@
 import { Mode } from 'fs';
-import { BuildMode, GetPLV8SQLFunctionsArgs, Volatility, TSFunction } from './types.js';
+import { GetPLV8SQLFunctionsArgs, Volatility, TSFunction } from './types.js';
 import { match } from 'ts-pattern';
-import { bundle } from './EsBuild';
 import { getFunctionsInFile } from './TsMorph';
 
 interface GetPLV8SQLFunctionArgs {
@@ -25,51 +24,22 @@ type FnSqlConfig = {
   trigger: boolean;
 };
 
-export const build = async ({
-  mode,
-  inputFile,
-  scopePrefix
-}: {
-  mode: BuildMode;
-  inputFile: string;
-  scopePrefix: string;
-}) => {
-  const bundledJsWithExportBlock = await bundle(inputFile);
-  const bundledJs = bundledJsWithExportBlock.replace(/export\s*{[^}]*};/gs, '');
+const getFileName = (outputFolder: string, fn: TSFunction, scopePrefix: string) => {
+  return `${outputFolder}/${scopePrefix}${fn.name}.plv8.sql`;
+};
 
-  const modeAdjustedBundledJs = match(mode)
-    .with('inline', () => bundledJs)
-    .with('start_proc', () =>
-      // Remove var from var plv8ify to make it attach to the global scope in start_proc mode
-      bundledJs.replace(`var ${scopePrefix} =`, `this.${scopePrefix} =`)
-    )
-    .with('bundle', () => bundledJs)
-    .exhaustive();
-  return modeAdjustedBundledJs;
+const typeMap = {
+  number: 'float8',
+  string: 'text',
+  boolean: 'boolean',
+  Date: 'date'
+};
+const getTypeFromMap = (type: string) => {
+  const typeLocal = type.split('.').pop();
+  return typeMap[typeLocal ?? type];
 };
 
 export class PLV8ify {
-  private _typeMap: Record<string, string> = {
-    number: 'float8',
-    string: 'text',
-    boolean: 'boolean',
-    Date: 'date'
-  };
-
-  private getScopedName(fn: TSFunction, scopePrefix: string) {
-    const scopedName = scopePrefix + fn.name;
-    return scopedName;
-  }
-
-  private getFileName(outputFolder: string, fn: TSFunction, scopePrefix: string) {
-    const scopedName = this.getScopedName(fn, scopePrefix);
-    return `${outputFolder}/${scopedName}.plv8.sql`;
-  }
-  private getTypeFromMap(type: string) {
-    const typeLocal = type.split('.').pop();
-    return this._typeMap[typeLocal ?? type];
-  }
-
   getPLV8SQLFunctions({
     scopePrefix,
     pgFunctionDelimiter,
@@ -84,7 +54,7 @@ export class PLV8ify {
     const exportedFunctions = functions.filter(fn => fn.isExported);
     const sqls = exportedFunctions.map(fn => {
       return {
-        filename: this.getFileName(outputFolder, fn, scopePrefix),
+        filename: getFileName(outputFolder, fn, scopePrefix),
         sql: this.getPLV8SQLFunction({
           fn,
           scopePrefix,
@@ -129,7 +99,7 @@ export class PLV8ify {
         fallbackReturnType: 'void'
       });
 
-      const initFileName = this.getFileName(outputFolder, virtualInitFn, scopePrefix);
+      const initFileName = getFileName(outputFolder, virtualInitFn, scopePrefix);
       startProcSQLs.push({
         filename: initFileName,
         sql: initFunction
@@ -147,7 +117,7 @@ export class PLV8ify {
         jsdocTags: []
       };
       const startProcSQLScript = this.getStartProcSQLScript({ scopePrefix });
-      const startProcFileName = this.getFileName(outputFolder, virtualStartFn, scopePrefix);
+      const startProcFileName = getFileName(outputFolder, virtualStartFn, scopePrefix);
       startProcSQLs.push({
         filename: startProcFileName,
         sql: startProcSQLScript
@@ -165,14 +135,14 @@ export class PLV8ify {
       // defaults
       paramTypeMapping: {},
       volatility: null,
-      sqlReturnType: this.getTypeFromMap(fn.returnType) || null,
+      sqlReturnType: getTypeFromMap(fn.returnType) || null,
       customSchema: '',
       trigger: false
     };
 
     // default param type mapping
     for (const param of fn.parameters) {
-      config.paramTypeMapping[param.name] = this.getTypeFromMap(param.type) || null;
+      config.paramTypeMapping[param.name] = getTypeFromMap(param.type) || null;
     }
 
     // process magic comments (legacy format)

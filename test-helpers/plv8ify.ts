@@ -1,5 +1,6 @@
 import path from 'path';
-import { PLV8ify, build } from '../build/PLV8ify';
+import { PLV8ify } from '../build/PLV8ify';
+import { createBundle } from '../build/bundle';
 import { pgClient } from './db';
 
 export const buildAndLoadTsToDb = async (dirName: string, relativePath: string) => {
@@ -7,7 +8,7 @@ export const buildAndLoadTsToDb = async (dirName: string, relativePath: string) 
 
   const plv8ify = new PLV8ify();
 
-  const bundledJs = await build({
+  const bundledJs = await createBundle({
     mode: 'inline',
     inputFile: codeFilePath,
     scopePrefix: ''
