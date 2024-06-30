@@ -52,7 +52,8 @@ export class PLV8ify {
   private _typeMap: Record<string, string> = {
     number: 'float8',
     string: 'text',
-    boolean: 'boolean'
+    boolean: 'boolean',
+    Date: 'date'
   };
 
   private getScopedName(fn: TSFunction, scopePrefix: string) {

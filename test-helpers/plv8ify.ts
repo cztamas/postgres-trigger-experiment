@@ -16,7 +16,7 @@ export const buildAndLoadTsToDb = async (dirName: string, relativePath: string) 
   const sqlFiles = plv8ify.getPLV8SQLFunctions({
     mode: 'inline',
     scopePrefix: '',
-    defaultVolatility: 'IMMUTABLE',
+    defaultVolatility: 'VOLATILE',
     bundledJs,
     inputFilePath: codeFilePath,
     pgFunctionDelimiter: '$plv8ify$',

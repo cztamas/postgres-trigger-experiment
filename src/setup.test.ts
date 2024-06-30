@@ -18,4 +18,16 @@ describe('dummy tests', () => {
     const result = await db.raw('SELECT now() as now');
     expect(result.rows).toEqual([{ now: new Date(testTimestamp) }]);
   });
+
+  test('plv8 should be loaded correctly', async () => {
+    await db.raw(`
+      CREATE FUNCTION plv8_test(value INTEGER) RETURNS VARCHAR AS $$
+        const range = Array(value).fill(null).map((_, index) => index);
+        return JSON.stringify(range);
+      $$ LANGUAGE plv8 IMMUTABLE STRICT;
+    `);
+
+    const result = await db.raw('SELECT plv8_test(5) as result');
+    expect(result.rows).toEqual([{ result: '[0,1,2,3,4]' }]);
+  });
 });
