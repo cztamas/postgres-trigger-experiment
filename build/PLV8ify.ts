@@ -1,15 +1,8 @@
-import fs, { Mode } from 'fs';
-import {
-  BuildArgs,
-  GetPLV8SQLFunctionsArgs,
-  PLV8ify as PLV8ifyInterface,
-  Volatility,
-  TSCompiler,
-  TSFunction
-} from './types.js';
+import { Mode } from 'fs';
+import { BuildMode, GetPLV8SQLFunctionsArgs, Volatility, TSFunction } from './types.js';
 import { match } from 'ts-pattern';
 import { bundle } from './EsBuild';
-import { TsMorph } from './TsMorph';
+import { getFunctionsInFile } from './TsMorph';
 
 interface GetPLV8SQLFunctionArgs {
   fn: TSFunction;
@@ -32,68 +25,35 @@ type FnSqlConfig = {
   trigger: boolean;
 };
 
-export class PLV8ify implements PLV8ifyInterface {
-  private _tsCompiler: TSCompiler;
+export const build = async ({
+  mode,
+  inputFile,
+  scopePrefix
+}: {
+  mode: BuildMode;
+  inputFile: string;
+  scopePrefix: string;
+}) => {
+  const bundledJsWithExportBlock = await bundle(inputFile);
+  const bundledJs = bundledJsWithExportBlock.replace(/export\s*{[^}]*};/gs, '');
 
+  const modeAdjustedBundledJs = match(mode)
+    .with('inline', () => bundledJs)
+    .with('start_proc', () =>
+      // Remove var from var plv8ify to make it attach to the global scope in start_proc mode
+      bundledJs.replace(`var ${scopePrefix} =`, `this.${scopePrefix} =`)
+    )
+    .with('bundle', () => bundledJs)
+    .exhaustive();
+  return modeAdjustedBundledJs;
+};
+
+export class PLV8ify {
   private _typeMap: Record<string, string> = {
     number: 'float8',
     string: 'text',
     boolean: 'boolean'
   };
-
-  constructor() {
-    this._tsCompiler = new TsMorph();
-  }
-
-  init(inputFilePath: string, typesFilePath?: string) {
-    if (fs.existsSync(inputFilePath)) {
-      this._tsCompiler.createSourceFile(inputFilePath);
-    }
-    this._typeMap = {
-      ...this._typeMap,
-      ...this.getCustomTypeMap(typesFilePath)
-    };
-  }
-
-  private removeExportBlock(bundledJs: string) {
-    return bundledJs.replace(/export\s*{[^}]*};/gs, '');
-  }
-
-  async build({ mode, inputFile, scopePrefix }: BuildArgs) {
-    const bundledJsR = await bundle(inputFile);
-    const bundledJs = this.removeExportBlock(bundledJsR);
-    const modeAdjustedBundledJs = match(mode)
-      .with('inline', () => bundledJs)
-      .with('start_proc', () =>
-        // Remove var from var plv8ify to make it attach to the global scope in start_proc mode
-        bundledJs.replace(`var ${scopePrefix} =`, `this.${scopePrefix} =`)
-      )
-      .with('bundle', () => bundledJs)
-      .exhaustive();
-    return modeAdjustedBundledJs;
-  }
-
-  private writeFile(filePath: string, content: string) {
-    try {
-      fs.unlinkSync(filePath);
-    } catch (e) {}
-    fs.writeFileSync(filePath, content);
-  }
-
-  write(path: string, string: string) {
-    this.writeFile(path, string);
-  }
-
-  private getCustomTypeMap(typesFilePath: string) {
-    let customTypeMap = null;
-    const typeMap = {};
-    if (fs.existsSync(typesFilePath)) {
-      customTypeMap = fs.readFileSync(typesFilePath, 'utf8');
-      eval(customTypeMap);
-      return typeMap;
-    }
-    return {};
-  }
 
   private getScopedName(fn: TSFunction, scopePrefix: string) {
     const scopedName = scopePrefix + fn.name;
@@ -109,25 +69,19 @@ export class PLV8ify implements PLV8ifyInterface {
     return this._typeMap[typeLocal ?? type];
   }
 
-  private getFunctions() {
-    return this._tsCompiler.getFunctions();
-  }
-
-  private getExportedFunctions() {
-    return this.getFunctions().filter(fn => fn.isExported);
-  }
-
   getPLV8SQLFunctions({
     scopePrefix,
     pgFunctionDelimiter,
     mode,
+    inputFilePath,
     bundledJs,
     fallbackReturnType,
     defaultVolatility,
     outputFolder
   }: GetPLV8SQLFunctionsArgs) {
-    const fns = this.getExportedFunctions();
-    const sqls = fns.map(fn => {
+    const functions = getFunctionsInFile(inputFilePath);
+    const exportedFunctions = functions.filter(fn => fn.isExported);
+    const sqls = exportedFunctions.map(fn => {
       return {
         filename: this.getFileName(outputFolder, fn, scopePrefix),
         sql: this.getPLV8SQLFunction({
@@ -156,7 +110,7 @@ export class PLV8ify implements PLV8ifyInterface {
 
       if (mode === 'bundle') {
         // make the function declarations available in the global scope
-        for (const fn of fns) {
+        for (const fn of exportedFunctions) {
           bundledJs += `globalThis.${fn.name} = ${fn.name};\n`;
         }
 

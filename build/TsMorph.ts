@@ -1,52 +1,41 @@
-import { FunctionDeclaration, Project, SourceFile } from 'ts-morph';
-import { TSCompiler, TSFunction } from './types';
+import { FunctionDeclaration, Project } from 'ts-morph';
+import { TSFunction } from './types';
 
-export class TsMorph implements TSCompiler {
-  private sourceFile: SourceFile;
+const getFunctionParameters = (fn: FunctionDeclaration) => {
+  const parameters = fn.getParameters();
+  return parameters.map(parameter => {
+    return {
+      name: parameter.getName(),
+      type: parameter.getType().getText()
+    };
+  });
+};
 
-  createSourceFile(inputFilePath: string) {
-    const project = new Project();
-    this.sourceFile = project.addSourceFileAtPath(inputFilePath);
-  }
+const getFunctionComments = (fn: FunctionDeclaration) => {
+  return fn.getLeadingCommentRanges().map(commentRange => commentRange.getText());
+};
 
-  private getFunctionReturnType(fn: FunctionDeclaration) {
-    return fn.getReturnType().getText();
-  }
+const getFunctionJsdocTags = (fn: FunctionDeclaration): TSFunction['jsdocTags'] => {
+  const jsdocTags = fn.getJsDocs().flatMap(jsdoc => jsdoc.getTags());
+  return jsdocTags.map(tag => ({
+    name: tag.getTagName(),
+    commentText: tag.getCommentText() || ''
+  }));
+};
 
-  private getFunctionParameters(fn: FunctionDeclaration) {
-    const params = fn.getParameters();
-    return params.map(p => {
-      return {
-        name: p.getName(),
-        type: p.getType().getText()
-      };
-    });
-  }
+export const getFunctionsInFile = (inputFilePath: string): TSFunction[] => {
+  const project = new Project();
+  const sourceFile = project.addSourceFileAtPath(inputFilePath);
 
-  private getFunctionComments(fn: FunctionDeclaration) {
-    const comments = fn.getLeadingCommentRanges().map(cr => cr.getText());
-    return comments;
-  }
-
-  private getFunctionJsdocTags(fn: FunctionDeclaration): TSFunction['jsdocTags'] {
-    const jsdocTags = fn.getJsDocs().flatMap(jsdoc => jsdoc.getTags());
-    return jsdocTags.map(tag => ({
-      name: tag.getTagName(),
-      commentText: tag.getCommentText() || ''
-    }));
-  }
-
-  getFunctions() {
-    const fns = this.sourceFile.getFunctions();
-    return fns.map(fn => {
-      return {
-        name: fn.getName(),
-        isExported: fn.isExported(),
-        parameters: this.getFunctionParameters(fn),
-        comments: this.getFunctionComments(fn),
-        returnType: this.getFunctionReturnType(fn),
-        jsdocTags: this.getFunctionJsdocTags(fn)
-      };
-    });
-  }
-}
+  const functions = sourceFile.getFunctions();
+  return functions.map(fn => {
+    return {
+      name: fn.getName(),
+      isExported: fn.isExported(),
+      parameters: getFunctionParameters(fn),
+      comments: getFunctionComments(fn),
+      returnType: fn.getReturnType().getText(),
+      jsdocTags: getFunctionJsdocTags(fn)
+    };
+  });
+};

@@ -1,14 +1,13 @@
 import path from 'path';
-import { PLV8ify } from '../build/PLV8ify';
+import { PLV8ify, build } from '../build/PLV8ify';
 import { pgClient } from './db';
 
 export const buildAndLoadTsToDb = async (dirName: string, relativePath: string) => {
   const codeFilePath = path.join(dirName, relativePath);
 
   const plv8ify = new PLV8ify();
-  plv8ify.init(codeFilePath, 'types.ts');
 
-  const bundledJs = await plv8ify.build({
+  const bundledJs = await build({
     mode: 'inline',
     inputFile: codeFilePath,
     scopePrefix: ''
@@ -19,6 +18,7 @@ export const buildAndLoadTsToDb = async (dirName: string, relativePath: string) 
     scopePrefix: '',
     defaultVolatility: 'IMMUTABLE',
     bundledJs,
+    inputFilePath: codeFilePath,
     pgFunctionDelimiter: '$plv8ify$',
     fallbackReturnType: 'JSONB',
     outputFolder: 'does-not-matter'
