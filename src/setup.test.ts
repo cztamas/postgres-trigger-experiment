@@ -4,6 +4,7 @@ import { overrideDbTime, clearTimeOverride } from '../test-helpers/db';
 describe('dummy tests', () => {
   afterEach(async () => {
     await clearTimeOverride();
+    await db.raw('DROP FUNCTION IF EXISTS plv8_test');
   });
 
   test('should connect to DB', async () => {
