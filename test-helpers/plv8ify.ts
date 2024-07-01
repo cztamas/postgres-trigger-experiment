@@ -20,7 +20,6 @@ export const buildAndLoadTsToDb = async (dirName: string, relativePath: string) 
     defaultVolatility: 'VOLATILE',
     bundledJs,
     inputFilePath: codeFilePath,
-    pgFunctionDelimiter: '$plv8ify$',
     fallbackReturnType: 'JSONB',
     outputFolder: 'does-not-matter'
   });

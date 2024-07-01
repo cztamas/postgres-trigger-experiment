@@ -12,7 +12,6 @@ export type BuildMode = 'inline' | 'start_proc' | 'bundle';
 
 export type GetPLV8SQLFunctionsArgs = {
   scopePrefix: string;
-  pgFunctionDelimiter: string;
   mode: BuildMode;
   bundledJs: string;
   inputFilePath: string;

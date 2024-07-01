@@ -6,7 +6,6 @@ import { getFunctionsInFile } from './TsMorph';
 interface GetPLV8SQLFunctionArgs {
   fn: TSFunction;
   scopePrefix: string;
-  pgFunctionDelimiter: string;
   mode: Mode;
   bundledJs: string;
   fallbackReturnType: string;
@@ -42,7 +41,6 @@ const getTypeFromMap = (type: string) => {
 export class PLV8ify {
   getPLV8SQLFunctions({
     scopePrefix,
-    pgFunctionDelimiter,
     mode,
     inputFilePath,
     bundledJs,
@@ -58,7 +56,6 @@ export class PLV8ify {
         sql: this.getPLV8SQLFunction({
           fn,
           scopePrefix,
-          pgFunctionDelimiter,
           mode,
           bundledJs,
           fallbackReturnType,
@@ -92,7 +89,6 @@ export class PLV8ify {
       const initFunction = this.getPLV8SQLFunction({
         fn: virtualInitFn,
         scopePrefix,
-        pgFunctionDelimiter: '$$',
         mode: 'inline',
         bundledJs,
         defaultVolatility,
@@ -116,11 +112,13 @@ export class PLV8ify {
         returnType: 'void',
         jsdocTags: []
       };
-      const startProcSQLScript = this.getStartProcSQLScript({ scopePrefix });
+
       const startProcFileName = getFileName(outputFolder, virtualStartFn, scopePrefix);
       startProcSQLs.push({
         filename: startProcFileName,
-        sql: startProcSQLScript
+        sql: `
+          SET plv8.start_proc = ${scopePrefix}_init;
+          SELECT plv8_reset();`
       });
     }
 
@@ -201,7 +199,6 @@ export class PLV8ify {
   getPLV8SQLFunction({
     fn,
     scopePrefix,
-    pgFunctionDelimiter,
     mode,
     bundledJs,
     fallbackReturnType,
@@ -224,7 +221,7 @@ export class PLV8ify {
 
     return [
       `DROP FUNCTION IF EXISTS ${scopedName}(${sqlParametersString});`,
-      `CREATE OR REPLACE FUNCTION ${scopedName}(${sqlParametersString}) RETURNS ${sqlReturnType} AS ${pgFunctionDelimiter}`,
+      `CREATE OR REPLACE FUNCTION ${scopedName}(${sqlParametersString}) RETURNS ${sqlReturnType} AS $$`,
       match(mode)
         .with('inline', () => bundledJs)
         .with(
@@ -237,13 +234,7 @@ export class PLV8ify {
         .with('void', () => '')
         .otherwise(() => `return ${fn.name}(${jsParametersString})`),
       '',
-      `${pgFunctionDelimiter} LANGUAGE plv8 ${volatility} STRICT;`
+      `$$ LANGUAGE plv8 ${volatility} STRICT;`
     ].join('\n');
   }
-
-  private getStartProcSQLScript = ({ scopePrefix }) =>
-    `
-SET plv8.start_proc = ${scopePrefix}_init;
-SELECT plv8_reset();
-`;
 }
