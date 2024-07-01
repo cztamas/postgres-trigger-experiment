@@ -1,6 +1,8 @@
 import { Event } from '../types';
 
-//@plv8ify-trigger
+/**
+ * @plv8ify_trigger
+ */
 export function streakTrigger(NEW: Event): Event {
   if (TG_OP !== 'INSERT' || NEW.type !== 'success') return NEW;
 

@@ -29,28 +29,6 @@ export const getFunctionConfig = (fn: TSFunction): FunctionConfig => {
     config.paramTypeMapping[param.name] = getTypeFromMap(param.type) || null;
   }
 
-  // process magic comments (legacy format)
-  for (const comment of fn.comments) {
-    const volatilityMatch = comment.match(
-      /^\/\/@plv8ify-volatility-(STABLE|IMMUTABLE|VOLATILE)/imu
-    );
-    if (volatilityMatch) config.volatility = volatilityMatch[1] as Volatility;
-
-    const schemaMatch = comment.match(/^\/\/@plv8ify-schema-name (.+)/imu);
-    if (schemaMatch) config.customSchema = schemaMatch[1];
-
-    for (const param of fn.parameters) {
-      const paramMatch = comment.match(/^\/\/@plv8ify-param (.+) ([\s\S]+)/imu);
-      if (paramMatch && paramMatch[1] === param.name)
-        config.paramTypeMapping[param.name] = paramMatch[2];
-    }
-
-    const returnMatch = comment.match(/^\/\/@plv8ify-return ([\s\S]+)/imu);
-    if (returnMatch) config.sqlReturnType = returnMatch[1];
-
-    if (comment.match(/^\/\/@plv8ify-trigger/imu)) config.trigger = true;
-  }
-
   // process jsdoc tags
   for (const tag of fn.jsdocTags) {
     if (
