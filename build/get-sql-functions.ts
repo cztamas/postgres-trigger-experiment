@@ -1,25 +1,24 @@
 import { match } from 'ts-pattern';
 import { TSFunction } from './types';
-import { getFunctionsInFile } from './TsMorph';
+import { getFunctionsInFile, bundle } from './build';
 import { getFunctionConfig } from './get-function-config';
 
 const fallbackReturnType = 'JSONB';
 
-export const getPLV8SQLFunctions = ({
+export const getSQLFunctions = async ({
   scopePrefix,
-  inputFilePath,
-  bundledJs
+  inputFilePath
 }: {
   scopePrefix: string;
-  bundledJs: string;
   inputFilePath: string;
 }) => {
+  const bundledJs = await bundle(inputFilePath);
   const exportedFunctions = getFunctionsInFile(inputFilePath).filter(fn => fn.isExported);
 
-  return exportedFunctions.map(fn => getPLV8SQLFunction({ fn, scopePrefix, bundledJs }));
+  return exportedFunctions.map(fn => getSQLFunction({ fn, scopePrefix, bundledJs }));
 };
 
-const getPLV8SQLFunction = ({
+const getSQLFunction = ({
   fn,
   scopePrefix,
   bundledJs

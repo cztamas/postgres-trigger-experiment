@@ -1,15 +1,12 @@
 import path from 'path';
-import { getPLV8SQLFunctions } from '../build/get-sql-functions';
-import { bundle } from '../build/bundle';
+import { getSQLFunctions } from '../build/get-sql-functions';
 import { pgClient } from './db';
 
 export const buildAndLoadTsToDb = async (dirName: string, relativePath: string) => {
   const codeFilePath = path.join(dirName, relativePath);
 
-  const bundledJs = await bundle(codeFilePath);
-  const sqlFiles = getPLV8SQLFunctions({
+  const sqlFiles = await getSQLFunctions({
     scopePrefix: '',
-    bundledJs,
     inputFilePath: codeFilePath
   });
 

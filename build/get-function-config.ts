@@ -1,14 +1,4 @@
-import { Volatility, TSFunction } from './types.js';
-
-type FunctionConfig = {
-  paramTypeMapping: {
-    [name: string]: string | null;
-  };
-  volatility: Volatility | null;
-  sqlReturnType: string | null;
-  customSchema: string;
-  trigger: boolean;
-};
+import { TSFunction, FunctionConfig, Volatility } from './types.js';
 
 const fallbackReturnType = 'JSONB';
 const defaultVolatility = 'VOLATILE';

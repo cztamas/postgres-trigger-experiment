@@ -7,4 +7,14 @@ export type TSFunction = {
   jsdocTags: { name: string; commentText: string }[];
 };
 
+export type FunctionConfig = {
+  paramTypeMapping: {
+    [name: string]: string | null;
+  };
+  volatility: Volatility | null;
+  sqlReturnType: string | null;
+  customSchema: string;
+  trigger: boolean;
+};
+
 export type Volatility = 'VOLATILE' | 'STABLE' | 'IMMUTABLE';
