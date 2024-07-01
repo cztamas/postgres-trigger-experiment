@@ -1,15 +1,14 @@
-import { Mode } from 'fs';
-import { GetPLV8SQLFunctionsArgs, Volatility, TSFunction } from './types.js';
+import { Volatility, TSFunction } from './types.js';
 import { match } from 'ts-pattern';
 import { getFunctionsInFile } from './TsMorph';
+
+const fallbackReturnType = 'JSONB';
+const defaultVolatility = 'VOLATILE';
 
 interface GetPLV8SQLFunctionArgs {
   fn: TSFunction;
   scopePrefix: string;
-  mode: Mode;
   bundledJs: string;
-  fallbackReturnType: string;
-  defaultVolatility: Volatility;
 }
 
 /** configuration for how a JS function should be transformed into a SQL function */
@@ -21,10 +20,6 @@ type FnSqlConfig = {
   sqlReturnType: string | null;
   customSchema: string;
   trigger: boolean;
-};
-
-const getFileName = (outputFolder: string, fn: TSFunction, scopePrefix: string) => {
-  return `${outputFolder}/${scopePrefix}${fn.name}.plv8.sql`;
 };
 
 const typeMap = {
@@ -41,88 +36,16 @@ const getTypeFromMap = (type: string) => {
 export class PLV8ify {
   getPLV8SQLFunctions({
     scopePrefix,
-    mode,
     inputFilePath,
-    bundledJs,
-    fallbackReturnType,
-    defaultVolatility,
-    outputFolder
-  }: GetPLV8SQLFunctionsArgs) {
-    const functions = getFunctionsInFile(inputFilePath);
-    const exportedFunctions = functions.filter(fn => fn.isExported);
-    const sqls = exportedFunctions.map(fn => {
-      return {
-        filename: getFileName(outputFolder, fn, scopePrefix),
-        sql: this.getPLV8SQLFunction({
-          fn,
-          scopePrefix,
-          mode,
-          bundledJs,
-          fallbackReturnType,
-          defaultVolatility
-        })
-      };
-    });
+    bundledJs
+  }: {
+    scopePrefix: string;
+    bundledJs: string;
+    inputFilePath: string;
+  }) {
+    const exportedFunctions = getFunctionsInFile(inputFilePath).filter(fn => fn.isExported);
 
-    const startProcSQLs = [];
-    if (mode === 'start_proc' || mode === 'bundle') {
-      // -- PLV8 + Server
-      const virtualInitFn: TSFunction = {
-        name: '_init',
-        comments: [],
-        isExported: false,
-        parameters: [],
-        returnType: 'void',
-        jsdocTags: []
-      };
-
-      if (mode === 'bundle') {
-        // make the function declarations available in the global scope
-        for (const fn of exportedFunctions) {
-          bundledJs += `globalThis.${fn.name} = ${fn.name};\n`;
-        }
-
-        // set a global symbol so that we can check if the init function has been called
-        bundledJs += `globalThis[Symbol.for('${scopePrefix}_initialized')] = true;\n`;
-      }
-
-      const initFunction = this.getPLV8SQLFunction({
-        fn: virtualInitFn,
-        scopePrefix,
-        mode: 'inline',
-        bundledJs,
-        defaultVolatility,
-        fallbackReturnType: 'void'
-      });
-
-      const initFileName = getFileName(outputFolder, virtualInitFn, scopePrefix);
-      startProcSQLs.push({
-        filename: initFileName,
-        sql: initFunction
-      });
-    }
-
-    if (mode === 'start_proc') {
-      const startFunctionName = 'start';
-      const virtualStartFn: TSFunction = {
-        name: startFunctionName,
-        comments: [],
-        isExported: false,
-        parameters: [],
-        returnType: 'void',
-        jsdocTags: []
-      };
-
-      const startProcFileName = getFileName(outputFolder, virtualStartFn, scopePrefix);
-      startProcSQLs.push({
-        filename: startProcFileName,
-        sql: `
-          SET plv8.start_proc = ${scopePrefix}_init;
-          SELECT plv8_reset();`
-      });
-    }
-
-    return sqls.concat(startProcSQLs);
+    return exportedFunctions.map(fn => this.getPLV8SQLFunction({ fn, scopePrefix, bundledJs }));
   }
 
   /**
@@ -132,8 +55,8 @@ export class PLV8ify {
     const config: FnSqlConfig = {
       // defaults
       paramTypeMapping: {},
-      volatility: null,
-      sqlReturnType: getTypeFromMap(fn.returnType) || null,
+      volatility: defaultVolatility,
+      sqlReturnType: getTypeFromMap(fn.returnType) || fallbackReturnType,
       customSchema: '',
       trigger: false
     };
@@ -196,18 +119,9 @@ export class PLV8ify {
     return config;
   }
 
-  getPLV8SQLFunction({
-    fn,
-    scopePrefix,
-    mode,
-    bundledJs,
-    fallbackReturnType,
-    defaultVolatility
-  }: GetPLV8SQLFunctionArgs) {
-    let { customSchema, paramTypeMapping, volatility, sqlReturnType, trigger } =
+  getPLV8SQLFunction({ fn, scopePrefix, bundledJs }: GetPLV8SQLFunctionArgs) {
+    const { customSchema, paramTypeMapping, volatility, sqlReturnType, trigger } =
       this.getFnSqlConfig(fn);
-    if (!volatility) volatility = defaultVolatility;
-    if (!sqlReturnType) sqlReturnType = fallbackReturnType;
 
     const sqlParametersString = trigger
       ? '' // triggers don't have parameters
@@ -222,14 +136,7 @@ export class PLV8ify {
     return [
       `DROP FUNCTION IF EXISTS ${scopedName}(${sqlParametersString});`,
       `CREATE OR REPLACE FUNCTION ${scopedName}(${sqlParametersString}) RETURNS ${sqlReturnType} AS $$`,
-      match(mode)
-        .with('inline', () => bundledJs)
-        .with(
-          'bundle',
-          () =>
-            `if (!globalThis[Symbol.for('${scopePrefix}_initialized')]) plv8.execute('SELECT ${scopePrefix}_init();');`
-        )
-        .otherwise(() => ''),
+      bundledJs,
       match(sqlReturnType.toLowerCase())
         .with('void', () => '')
         .otherwise(() => `return ${fn.name}(${jsParametersString})`),

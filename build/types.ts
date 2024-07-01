@@ -8,14 +8,3 @@ export type TSFunction = {
 };
 
 export type Volatility = 'VOLATILE' | 'STABLE' | 'IMMUTABLE';
-export type BuildMode = 'inline' | 'start_proc' | 'bundle';
-
-export type GetPLV8SQLFunctionsArgs = {
-  scopePrefix: string;
-  mode: BuildMode;
-  bundledJs: string;
-  inputFilePath: string;
-  fallbackReturnType: string;
-  defaultVolatility: Volatility;
-  outputFolder: string;
-};
